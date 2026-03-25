@@ -1,0 +1,164 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Core user profile for coaches, clients, and admins.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["coach", "client", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "verified": { "type": "boolean" },
+        "points": { "type": "integer" }
+      },
+      "required": ["email", "role", "createdAt", "points"]
+    },
+    "CoachProfile": {
+      "title": "CoachProfile",
+      "description": "Detailed profile for users with the 'coach' role.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Reference to the User ID." },
+        "displayName": { "type": "string" },
+        "coachingSkills": { "type": "array", "items": { "type": "string" } },
+        "experienceYears": { "type": "integer" },
+        "certifications": { "type": "array", "items": { "type": "string" } },
+        "resumeUrl": { "type": "string" },
+        "hourlyRate": { "type": "number" },
+        "currency": { "type": "string" },
+        "offersFreeSession": { "type": "boolean" },
+        "freeSessionDuration": { "type": "integer" },
+        "rating": { "type": "number" },
+        "totalReviews": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" }
+      },
+      "required": ["userId", "displayName", "coachingSkills", "experienceYears", "createdAt"]
+    },
+    "Arena": {
+      "title": "Arena",
+      "description": "Training locations.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "facilities": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["name", "address", "createdAt"]
+    },
+    "Session": {
+      "title": "Session",
+      "description": "Booked training sessions.",
+      "type": "object",
+      "properties": {
+        "coachId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "arenaId": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["booked", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" }
+      },
+      "required": ["coachId", "clientId", "startTime", "endTime", "status", "createdAt"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Coach reviews by clients.",
+      "type": "object",
+      "properties": {
+        "coachId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "rating": { "type": "integer" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["coachId", "clientId", "rating", "createdAt"]
+    },
+    "RewardTransaction": {
+      "title": "RewardTransaction",
+      "description": "Points earned or redeemed.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "points": { "type": "integer" },
+        "type": { "type": "string", "enum": ["earn", "redeem"] },
+        "source": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "points", "type", "createdAt"]
+    },
+    "ValueCode": {
+      "title": "ValueCode",
+      "description": "Referral redemption codes.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "code": { "type": "string" },
+        "pointsUsed": { "type": "integer" },
+        "valueEquivalent": { "type": "integer" },
+        "maxUsagePercentage": { "type": "integer" },
+        "isUsed": { "type": "boolean" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "code", "pointsUsed", "valueEquivalent", "isUsed", "expiresAt", "createdAt"]
+    },
+    "Sponsor": {
+      "title": "Sponsor",
+      "description": "Platform sponsors.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["name", "logoUrl"]
+    },
+    "SponsorOffer": {
+      "title": "SponsorOffer",
+      "description": "Offers from sponsors.",
+      "type": "object",
+      "properties": {
+        "sponsorId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "requiredPoints": { "type": "integer" },
+        "valueEquivalent": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sponsorId", "title", "requiredPoints", "valueEquivalent", "createdAt"]
+    },
+    "PaymentMethod": {
+      "title": "PaymentMethod",
+      "description": "External payment references.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["card", "paypal"] },
+        "providerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles." },
+    "/coachProfiles/{coachId}": { "schema": "CoachProfile", "description": "Coach-specific profiles." },
+    "/arenas/{arenaId}": { "schema": "Arena", "description": "Training locations." },
+    "/sessions/{sessionId}": { "schema": "Session", "description": "Training sessions." },
+    "/reviews/{reviewId}": { "schema": "Review", "description": "Coach reviews." },
+    "/rewardTransactions/{transactionId}": { "schema": "RewardTransaction", "description": "Points history." },
+    "/valueCodes/{codeId}": { "schema": "ValueCode", "description": "Redemption codes." },
+    "/sponsors/{sponsorId}": { "schema": "Sponsor", "description": "Sponsors." },
+    "/sponsorOffers/{offerId}": { "schema": "SponsorOffer", "description": "Sponsor offers." },
+    "/paymentMethods/{methodId}": { "schema": "PaymentMethod", "description": "Payment references." }
+  }
+}

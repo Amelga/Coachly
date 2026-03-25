@@ -1,0 +1,194 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: /users/{userId}
+    // Fields: email, role, createdAt, firstName, lastName, phoneNumber, photoURL, bio, verified, points
+    //
+    // Collection: /coachProfiles/{coachId}
+    // Fields: userId, displayName, coachingSkills, experienceYears, certifications, resumeUrl, hourlyRate, currency, offersFreeSession, freeSessionDuration, rating, totalReviews, createdAt, description
+    //
+    // Collection: /arenas/{arenaId}
+    // Fields: name, address, createdAt, description, facilities
+    //
+    // Collection: /sessions/{sessionId}
+    // Fields: coachId, clientId, arenaId, startTime, endTime, status, createdAt, notes
+    //
+    // Collection: /reviews/{reviewId}
+    // Fields: coachId, clientId, rating, comment, createdAt
+    //
+    // Collection: /rewardTransactions/{transactionId}
+    // Fields: userId, points, type, source, createdAt
+    //
+    // Collection: /valueCodes/{codeId}
+    // Fields: userId, code, pointsUsed, valueEquivalent, maxUsagePercentage, isUsed, expiresAt, createdAt
+    //
+    // Collection: /sponsors/{sponsorId}
+    // Fields: name, logoUrl, description
+    //
+    // Collection: /sponsorOffers/{offerId}
+    // Fields: sponsorId, title, description, requiredPoints, valueEquivalent, createdAt
+    //
+    // Collection: /paymentMethods/{methodId}
+    // Fields: userId, type, providerId, createdAt
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          (request.auth.token.email == "firstcupdmcc@gmail.com" && request.auth.token.email_verified == true) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        );
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['email', 'role', 'createdAt', 'points']) &&
+             hasOnlyAllowedFields(['email', 'role', 'createdAt', 'firstName', 'lastName', 'phoneNumber', 'photoURL', 'bio', 'verified', 'points', 'updatedAt']) &&
+             isValidEmail(data.email) &&
+             data.role in ['coach', 'client', 'admin'] &&
+             isValidTimestamp(data.createdAt) &&
+             data.points is int && data.points >= 0;
+    }
+
+    function isValidCoachProfile(data) {
+      return hasRequiredFields(['userId', 'displayName', 'coachingSkills', 'experienceYears', 'createdAt']) &&
+             hasOnlyAllowedFields(['userId', 'displayName', 'coachingSkills', 'experienceYears', 'createdAt', 'updatedAt', 'description', 'certifications', 'resumeUrl', 'hourlyRate', 'currency', 'offersFreeSession', 'freeSessionDuration', 'rating', 'totalReviews']) &&
+             data.userId is string &&
+             data.displayName is string && data.displayName.size() > 0 &&
+             data.coachingSkills is list &&
+             data.experienceYears is int &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidArena(data) {
+      return hasRequiredFields(['name', 'address', 'createdAt']) &&
+             hasOnlyAllowedFields(['name', 'address', 'createdAt', 'updatedAt', 'description', 'facilities']) &&
+             data.name is string && data.address is string &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidSession(data) {
+      return hasRequiredFields(['coachId', 'clientId', 'startTime', 'endTime', 'status', 'createdAt']) &&
+             hasOnlyAllowedFields(['coachId', 'clientId', 'arenaId', 'startTime', 'endTime', 'status', 'createdAt', 'updatedAt', 'notes']) &&
+             data.coachId is string && data.clientId is string &&
+             isValidTimestamp(data.startTime) && isValidTimestamp(data.endTime) &&
+             data.status in ['booked', 'completed', 'cancelled'] &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    function isValidReview(data) {
+      return hasRequiredFields(['coachId', 'clientId', 'rating', 'createdAt']) &&
+             hasOnlyAllowedFields(['coachId', 'clientId', 'rating', 'comment', 'createdAt', 'updatedAt']) &&
+             data.coachId is string && data.clientId is string &&
+             data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+             isValidTimestamp(data.createdAt);
+    }
+
+    // ===============================================================
+    // Match Rules
+    // ===============================================================
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role != 'admin' || isAdmin());
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || isAdmin();
+    }
+
+    match /coachProfiles/{coachId} {
+      allow read: if true;
+      allow create: if (isOwner(coachId) && isValidCoachProfile(request.resource.data)) || isAdmin();
+      allow update: if (isOwner(coachId) && isValidCoachProfile(request.resource.data)) || isAdmin();
+    }
+
+    match /arenas/{arenaId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /sessions/{sessionId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.coachId || request.auth.uid == resource.data.clientId || isAdmin());
+      allow create: if isAuthenticated() && isValidSession(request.resource.data) && (request.auth.uid == request.resource.data.coachId || request.auth.uid == request.resource.data.clientId);
+      allow update: if isAuthenticated() && isValidSession(request.resource.data) && (request.auth.uid == resource.data.coachId || request.auth.uid == resource.data.clientId || isAdmin());
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidReview(request.resource.data) && request.auth.uid == request.resource.data.clientId;
+      allow update, delete: if isAdmin();
+    }
+
+    match /rewardTransactions/{transactionId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    match /valueCodes/{codeId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    match /sponsors/{sponsorId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /sponsorOffers/{offerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /paymentMethods/{methodId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId) && !isAdmin();
+      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
